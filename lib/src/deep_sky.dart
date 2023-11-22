@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:alpha_lib/src/units.dart';
+
 import '../alpha_lib.dart';
 
 class DeepSky extends SkyObject {
@@ -14,9 +16,11 @@ class DeepSky extends SkyObject {
     // tan Az = sin(hour angle) / (cos(ha)sin(lat) - tan(dec)cos(lat)
     // sin Alt = sin(lat)sin(dec) + cos(lat)cos(ha)
 
-    var az = atan2(sin(gmtHourAngleRad), (cos(gmtHourAngleRad) * sin(latitude)) - (tan(decRad) * cos(latitude)));
+    final latRad = latitude.toRadians(Units.degrees);
 
-    var alt = asin(sin(latitude) * sin(decRad) + cos(latitude) * cos(decRad) * cos(gmtHourAngleRad));
+    final az = atan2(sin(localHourAngleRad), (cos(localHourAngleRad) * sin(latRad)) - (tan(decRad) * cos(latRad)));
+
+    final alt = asin(sin(latRad) * sin(decRad) + cos(latRad) * cos(decRad) * cos(localHourAngleRad));
 
     return [alt, az];
   }
