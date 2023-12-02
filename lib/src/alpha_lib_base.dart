@@ -30,9 +30,9 @@ abstract class SkyObject {
   /// [longitude] of observer in degrees  <br>
   /// [raRad] right ascension of the object in radians <br>
   /// [decRad] declination of the object in radians <br>
-  /// [minAz] in degrees (use -1 if not using a minimum azimuth filter) <br>
-  /// [maxAz] in degrees (use -1 if not using a maximum azimuth filter) <br>
-  /// [minAlt] in degrees (use -1 if not using a minimum altitude filter) <br>
+  /// [minAz] minimum azimuth filter in degrees, -1 by default <br>
+  /// [maxAz] maximum azimuth filter in degrees, -1 by default <br>
+  /// [minAlt] minimum altitude filter in degrees, -1 by default <br>
   /// [time] of observation in UTC
   SkyObject({required this.latitude, required this.longitude, required this.raRad, required this.decRad, this.minAz = -1,
       this.maxAz = -1, this.minAlt = -1, this.utcOffset = 0, required this.time});
@@ -116,7 +116,7 @@ extension Radians on double {
     if(from == Units.degrees){
       return this * (pi / 180);
     }
-    else if (from == Units.hours){
+    if (from == Units.hours){
       return this * 15 * (pi / 180);
     }
     return this;
@@ -127,7 +127,7 @@ extension Radians on double {
     if(from == Units.radians){
       return this * (180 / pi);
     }
-    else if(from == Units.hours){
+    if(from == Units.hours){
       return this * 15;
     }
     return this;
