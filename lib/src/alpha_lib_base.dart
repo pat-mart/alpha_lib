@@ -37,16 +37,16 @@ abstract class SkyObject {
   SkyObject({required this.latitude, required this.longitude, required this.raRad, required this.decRad, this.minAz = -1,
       this.maxAz = -1, this.minAlt = -1, this.utcOffset = 0, required this.time});
 
-  /// GMT hour angle (UTC sidereal time - right ascension)
-  double get gmtHourAngleRad {
-    return (gmtMeanSiderealHours * 0.2618) - raRad;
+  /// GMT hour angle (UTC sidereal time - right ascension) in radians
+  double gmtHourAngleRad([hoursSinceMidnight = 0.0]) {
+    return (gmtMeanSiderealHour(hoursSinceMidnight) * 0.2618) - raRad;
   }
 
   /// The mean sidereal time represented as hours (in [double] form). For the local sidereal time, subtract or add a UTC offset or use [localSiderealHours]
-  double get gmtMeanSiderealHours {
+  double gmtMeanSiderealHour([hoursSinceMidnight = 0.0]) {
     final julianDay = julianDayUtc(true) - 2451545;
 
-    final hoursElapsed = DateTime.timestamp().hour;
+    final hoursElapsed = hoursSinceMidnight == 0 ? time.toUtc().hour : hoursSinceMidnight;
 
     final numCenturies = julianDay / 36525;
 
@@ -55,13 +55,38 @@ abstract class SkyObject {
     return gmstHours;
   }
 
-  double get localSiderealHours {
-    return gmtMeanSiderealHours + utcOffset;
+  /// Gets the local time (hour) from a sidereal hour
+  double localTimeFromSidereal(double sidereal){
+
+    var localHour = time.hour + (time.minute / 60) + (time.second / 3600);
+
+    if(localHour > 24){
+      localHour -= 24;
+    }
+    else if(localHour < 0){
+      localHour += 24;
+    }
+
+    print(localSiderealHour(localHour));
+
+    final localTime = localHour + utcOffset + (sidereal - (localSiderealHour(localHour)) / 1.0027379);
+
+    print(localTime);
+
+    return localTime;
+  }
+
+
+  double localSiderealHour([hoursSinceMidnight = 0.0]) {
+    if(gmtMeanSiderealHour(hoursSinceMidnight) + utcOffset < 0){
+      return (gmtMeanSiderealHour(hoursSinceMidnight) + utcOffset) + 24;
+    }
+    return gmtMeanSiderealHour(hoursSinceMidnight) + utcOffset;
   }
 
   /// Local hour angle (local sidereal time - right ascension) in radians
-  double get localHourAngleRad {
-    return localSiderealHours.toRadians(Units.hours) - raRad;
+  double localHourAngleRad([hoursSinceMidnight = 0.0]) {
+    return localSiderealHour(hoursSinceMidnight).toRadians(Units.hours) - raRad;
   }
 
   /// Returns the Julian calendar day of [this.time] in UTC, or the Julian day of
@@ -75,7 +100,7 @@ abstract class SkyObject {
     var gmtH = time.hour;
 
     if (midnightBefore) {
-      DateTime dt = DateTime.timestamp();
+      DateTime dt = time.toUtc();
 
       final hour = dt.hour;
 
@@ -106,6 +131,23 @@ abstract class SkyObject {
     final julianDay = (367 * year) - ((7 * (year + (month + 9) / 12)) / 4) + (275 * month / 9) + day + 1721013.5 + gmtH / 24;
 
     return julianDay;
+  }
+}
+
+extension Times on List<double> {
+
+  List<double> get toTimes {
+    if(length > 0){
+      for(int i = 0; i < length; i++){
+        if(this[i] > 24){
+          this[i] -= 24;
+        }
+        else if(this[i] < 0){
+          this[i] += 24;
+        }
+      }
+    }
+    return this;
   }
 }
 
