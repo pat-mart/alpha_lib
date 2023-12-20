@@ -41,11 +41,11 @@ class DeepSky extends SkyObject {
 
     var tempTime = time;
 
-    var month = DateTime.timestamp().month;
+    final month = DateTime.timestamp().month;
 
-    var year = DateTime.timestamp().year;
+    final year = DateTime.timestamp().year;
 
-    var day = DateTime.timestamp().day;
+    final day = DateTime.timestamp().day;
 
     time = DateTime(year, month, day).toUtc();
 
@@ -54,7 +54,7 @@ class DeepSky extends SkyObject {
       time = time.add(Duration(minutes: 4));
 
       if(altAz[1].toDegrees(Units.radians) > minAz && altAz[1].toDegrees(Units.radians) < (maxAz == -1 ? 360 : maxAz)
-          && altAz[0] > (minAlt == -1 ? 0 : minAlt)){
+          && altAz[0].toDegrees(Units.radians) > (minAlt == -1 ? 0 : minAlt)){
 
         if(azHours[0] >= i/15){
           azHours[0] = i/15;
@@ -71,7 +71,12 @@ class DeepSky extends SkyObject {
     return azHours;
   }
 
-  /// Returns a map with keys 'az', 'alt', 'time'
+  // List<double> hoursVisible {
+  //
+  // }
+
+  /// Returns a map with keys 'az', 'alt', 'time' (all -1 if object never rises)
+  /// Time is local and az, alt are in radians
   Map<String, double> get peakInfo {
     if(localRiseSetTimes[0] == -1){
       return {'az': -1, 'alt': -1, 'time': -1};

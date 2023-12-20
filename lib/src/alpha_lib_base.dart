@@ -1,12 +1,11 @@
 import 'dart:math';
 
 import 'package:alpha_lib/src/deep_sky.dart';
-import 'package:alpha_lib/src/helio.dart';
 import 'package:alpha_lib/src/units.dart';
 
-
-/// This class contains some useful methods and attributes shared by its child classes [DeepSky] and [Helio].
-/// The calculation methods in this class use formulas provided by the [United States Navy Astronomical Applications Department.](https://aa.usno.navy.mil)
+/// This class contains some useful methods and attributes shared by its child class [DeepSky].
+/// There was originally going to be another child class dealing with heliocentric objects, but the package I was planning on using is only available in Flutter projects.
+/// The calculation methods in this class use formulas provided by the [United States Navy Astronomical Applications Department](https://aa.usno.navy.mil).
 abstract class SkyObject {
   double latitude = 0;
 
@@ -33,13 +32,59 @@ abstract class SkyObject {
   /// [minAz] minimum azimuth filter in degrees, -1 by default <br>
   /// [maxAz] maximum azimuth filter in degrees, -1 by default <br>
   /// [minAlt] minimum altitude filter in degrees, -1 by default <br>
-  /// [time] of observation in UTC
+  /// [time] of observation in UTC.
   SkyObject({required this.latitude, required this.longitude, required this.raRad, required this.decRad, this.minAz = -1,
       this.maxAz = -1, this.minAlt = -1, this.utcOffset = 0, required this.time});
+
+  SkyObject.helio({required this.latitude, required this.longitude, this.minAz = -1,
+    this.maxAz = -1, this.minAlt = -1, this.utcOffset = 0, required this.time});
 
   /// GMT hour angle (UTC sidereal time - right ascension) in radians
   double gmtHourAngleRad([hoursSinceMidnight = 0.0]) {
     return (gmtMeanSiderealHour(hoursSinceMidnight) * 0.2618) - raRad;
+  }
+
+  /// The Equation of Time returns the difference between apparent and mean solar time in minutes
+  double get eot {
+    final dayOfYear = time.difference(DateTime(time.year, 1, 1)).inDays.toDouble().round();
+
+    final D = 6.24004077 + 0.01720197 * (365.25 * (time.year - 2000) + dayOfYear);
+
+    return -7.659 * sin(D) + 9.863 * sin(2 * D + 3.592);
+  }
+
+  /// Returns the local sunrise and sunset times in hours
+  /// Returns [[0.0, 0.0]] if the Sun never sets and [[-1, -1]] if the sun never rises
+  /// For local sunrise and sunset times, add [utcOffset]
+  List<double> get sunriseSunset  {
+
+    int dayOfYear = time.difference(DateTime(time.year, 1, 1).toUtc()).inDays.toDouble().round();
+
+    final solarDecl = -23.45.toRadians(Units.degrees) * cos((360/365 * (dayOfYear + 10)).toRadians(Units.degrees));
+
+    final circumpolarTest = (cos(pi/2) - (sin(solarDecl) * sin(latitude.toRadians(Units.degrees)))) / (cos(solarDecl) * cos(latitude.toRadians(Units.degrees)));
+
+    if(circumpolarTest > 1){
+      return [0.0, 0.0];
+    }
+    else if(circumpolarTest < -1){
+      return [-1, -1];
+    }
+
+    // arccos ( (cos(90.833) / cos(lat)cos(decl)) -  tan(lat)tan(decl)
+    final sunriseHa = acos(
+        (
+            cos(89.133.toRadians(Units.degrees)) /
+                ( cos(latitude.toRadians(Units.degrees)) * cos(solarDecl) )
+        ) - (tan(latitude.toRadians(Units.degrees) * tan(solarDecl))) );
+
+    final sunsetHa = -sunriseHa;
+
+    final sunriseTime = (720 - 4 * (longitude + sunriseHa.toDegrees(Units.radians)) - eot + (utcOffset * 60)) / 60;
+
+    final sunsetTime = (720 - 4 * (longitude + sunsetHa.toDegrees(Units.radians)) - eot + (utcOffset * 60)) / 60;
+
+    return [sunriseTime, sunsetTime];
   }
 
   /// The mean sidereal time represented as hours (in [double] form). For the local sidereal time, subtract or add a UTC offset or use [localSiderealHours]
@@ -55,7 +100,7 @@ abstract class SkyObject {
     return gmstHours;
   }
 
-  /// Gets the local time (hour) from a sidereal hour
+  /// Gets the local time (hour) from the local sidereal time at the same location
   double localTimeFromSidereal(double sidereal){
 
     var localHour = time.hour + (time.minute / 60) + (time.second / 3600);
@@ -67,11 +112,7 @@ abstract class SkyObject {
       localHour += 24;
     }
 
-    print(localSiderealHour(localHour));
-
     final localTime = localHour + utcOffset + (sidereal - (localSiderealHour(localHour)) / 1.0027379);
-
-    print(localTime);
 
     return localTime;
   }
@@ -89,7 +130,7 @@ abstract class SkyObject {
     return localSiderealHour(hoursSinceMidnight).toRadians(Units.hours) - raRad;
   }
 
-  /// Returns the Julian calendar day of [this.time] in UTC, or the Julian day of
+  /// Returns the Julian calendar day of [this.time] in UTC
   double julianDayUtc([bool midnightBefore = false]) {
     var year = time.year;
 
@@ -136,7 +177,7 @@ abstract class SkyObject {
 
 extension Times on List<double> {
 
-  List<double> get toTimes {
+  List<double> get correctTimes {
     if(length > 0){
       for(int i = 0; i < length; i++){
         if(this[i] > 24){
@@ -151,7 +192,7 @@ extension Times on List<double> {
   }
 }
 
-extension Radians on double {
+extension Conversion on double {
 
   double toRadians(Units from){
 
