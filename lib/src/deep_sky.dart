@@ -9,6 +9,7 @@ class DeepSky extends SkyObject {
   bool neverSets = false;
   bool neverRises = false;
 
+  /// See [SkyObject] for constructor parameter information
   DeepSky({required super.latitude, required super.longitude, required super.raRad, required super.decRad, required super.time, super.utcOffset = 0, super.maxAz = -1, super.minAlt = -1, super.minAz = -1});
 
   /// Returns [alt, az] (radians)
@@ -18,7 +19,7 @@ class DeepSky extends SkyObject {
 
     final alt = asin(sin(latRad) * sin(decRad) + cos(latRad) * cos(decRad) * cos(localHourAngleRad(time.hour)));
 
-    var az = atan2(sin(localHourAngleRad(time.hour)), (cos(localHourAngleRad(time.hour)) * sin(latRad)) - (tan(decRad) * cos(latRad)) );
+    var az = atan2(sin(localHourAngleRad(time.hour)), (cos(localHourAngleRad(time.hour)) * sin(latRad)) - (tan(decRad) * cos(latRad)));
 
     az -= pi;
 
@@ -29,15 +30,16 @@ class DeepSky extends SkyObject {
     return [alt, az];
   }
 
-  /// Returns local times within filters in radians or [-1, -1] if never within all filters
+  /// Returns local times the object is within filters [(minAlt, minAz, maxAz)] in radians or [-1, -1] if never within all filters
   /// Reference point is the day of the plan starting
-  List<double> get withinFilters {
+  List<double> get timesWithinFilters {
 
     // not sure if there is a way to solve for a specific azimuth as a function of hour angle so taking brute force approach
-    // since brute forcing azimuth already, sort of? makes sense to do altitude as well
+    // since brute forcing azimuth already, sort of? makes sense to determine altitude times as well
+    // although there is a simple way to determine altitude times in constant time
     // improvement suggestions obviously appreciated
 
-    List<double> azHours = [25, -1];
+    List<double> hours = [25, -1];
 
     var tempTime = time;
 
@@ -56,24 +58,68 @@ class DeepSky extends SkyObject {
       if(altAz[1].toDegrees(Units.radians) > minAz && altAz[1].toDegrees(Units.radians) < (maxAz == -1 ? 360 : maxAz)
           && altAz[0].toDegrees(Units.radians) > (minAlt == -1 ? 0 : minAlt)){
 
-        if(azHours[0] >= i/15){
-          azHours[0] = i/15;
+        if(hours[0] >= i/15){
+          hours[0] = i/15;
         }
 
-        if(azHours[1] <= i/15){
-          azHours[1] = i/15;
+        if(hours[1] <= i/15){
+          hours[1] = i/15;
         }
       }
     }
 
-    time = tempTime;
+    if(hours[0] == 25){
+      return [-1, -1];
+    }
 
-    return azHours;
+    hours[0] = hours[0].toRadians(Units.hours);
+    hours[1] = hours[1].toRadians(Units.hours);
+
+    return hours;
   }
 
-  // List<double> hoursVisible {
-  //
-  // }
+  /// Returns the hours an object is observable, meaning it is in a sufficiently dark sky.
+  List<double> get hoursVisible {
+    final sunAlwaysUp = sunriseSunset()[0] == 0;
+    final sunAlwaysDown = sunriseSunset()[0] == -1;
+
+    if(sunriseSunset(104)[0].isNaN){
+      return [-1, -1];
+    }
+    final morningTwi = sunriseSunset(104)[0];
+    final evenTwi = sunriseSunset(104)[1];
+
+    print(localRiseSetTimes);
+
+    final objRise = localRiseSetTimes[0];
+    final objSet = localRiseSetTimes[1];
+
+    // Not going to explain the logic behind all of these.
+    // They should work and I don't believe any are super extraneous.
+    // I also don't believe any are missing, but I could easily be wrong.
+    if (morningTwi <= objRise && objRise <= objSet && objSet <= evenTwi){
+      return [-1, -1];
+    }
+    else if(objSet <= objRise && objRise <= morningTwi){ // I am not sure if this is possible.
+      return [objRise, morningTwi, evenTwi, objSet];
+    }
+    else if(objRise <= morningTwi && objSet <= evenTwi){
+      return [objRise, morningTwi];
+    }
+    else if(evenTwi >= objRise && objRise >= morningTwi && morningTwi >= objSet){
+      return [evenTwi, objSet];
+    }
+    else if(objRise >= evenTwi && objSet <= morningTwi){
+      return [objRise, objSet];
+    }
+    else if(objRise >= evenTwi && objSet >= morningTwi){
+      return [objRise, morningTwi];
+    }
+    else if(objRise <= evenTwi && objSet >= morningTwi){
+      return [evenTwi, morningTwi];
+    }
+    return [-1, -1];
+  }
 
   /// Returns a map with keys 'az', 'alt', 'time' (all -1 if object never rises)
   /// Time is local and az, alt are in radians
@@ -116,7 +162,7 @@ class DeepSky extends SkyObject {
 
 
 
-  /// Returns [rise, set] in radians, [-1, -1] if object never rises, [0, 0] if object never sets
+  /// Returns [[rise, set]] in radians, [[-1, -1]] if object never rises, [[0, 0]] if object never sets
   List<double> get localRiseSetTimes {
 
     //Checks if obj is always above horizon
@@ -141,6 +187,18 @@ class DeepSky extends SkyObject {
     return [riseTimeRad + utcOffset.toRadians(Units.hours), setTimeRad + utcOffset.toRadians(Units.hours)];
   }
 
+
+  /// Like a combination of [hoursVisible] and [timesWithinFilters], indicates the local hours which an object is observable and within filters
+  List<double> get suggestedHours {
+    if(timesWithinFilters[0] == -1 || hoursVisible[0] == -1){
+      final start = [hoursVisible[0], timesWithinFilters[0]].reduce(min);
+      final end = [hoursVisible[1], timesWithinFilters[1]].reduce(min);
+
+      return [start, end];
+    }
+    return [-1, -1];
+  }
+
   /// Returns [rise, set] in radians, [-1, -1] if object never rises, [0, 0] if object never sets
   List<double> get utcRiseSetTimes {
 
@@ -150,5 +208,4 @@ class DeepSky extends SkyObject {
 
     return localRiseSetTimes;
   }
-
 }

@@ -3,6 +3,6 @@
 /// More dartdocs go here.
 library;
 
-export 'src/alpha_lib_base.dart';
+export 'src/sky_object.dart';
 
 // TODO: Export any libraries intended for clients of this package.

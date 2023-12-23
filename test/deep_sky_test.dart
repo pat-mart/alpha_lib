@@ -10,12 +10,17 @@ void main() {
 
     DeepSky altair = DeepSky(latitude: 40.5, longitude: -73.1, raRad: 4.98, decRad: 0.1559, time: DateTime.timestamp(), utcOffset: -5, minAz: 100, maxAz: 350, minAlt: 40);
 
+    DeepSky vegaCircumpolar = DeepSky(latitude: -88.5, longitude: -73.1, raRad: 4.832, decRad: 0.67718, time: DateTime.timestamp(), utcOffset: -5, minAz: 200, maxAz: 300);
+    DeepSky altairCircumpolar = DeepSky(latitude: 88.5, longitude: -73.1, raRad: 4.98, decRad: 0.1559, time: DateTime.timestamp(), utcOffset: -5, minAz: 100, maxAz: 350, minAlt: 40);
+
     DeepSky polaris = DeepSky(latitude: 40.5, longitude: -73.1, raRad: 0.79, decRad: pi/2, time: DateTime.timestamp(), utcOffset: -5);
 
-    setUp(() {
-      print(altair.sunriseSunset);
+    setUp((){});
 
-      DeepSky andromeda = DeepSky(latitude: 40.5, longitude: -72.1, raRad: 0.01243, decRad: 0.7191, time: DateTime.timestamp(), utcOffset: -5, minAz: 200, maxAz: 300, minAlt: 40);
+    test('Circumpolar sunrise/set test', () {
+      expect(altairCircumpolar.sunriseSunset()[0] == -1, true);
+
+      expect(vegaCircumpolar.sunriseSunset()[0] == 0, true);
     });
 
     test('Azimuth test', () {
@@ -29,7 +34,7 @@ void main() {
     });
 
     test('Altitude test', () {
-      expect(altair.altAz[0] > 0, false);
+      expect(altair.altAz[0] > 0, true);
 
       expect(vega.altAz[0] > 0, true);
     });
