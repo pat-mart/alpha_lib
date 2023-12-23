@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:alpha_lib/src/deep_sky.dart';
 
 class Example {

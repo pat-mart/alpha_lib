@@ -15,13 +15,13 @@ A database-less package for performing astronomical calculations with any third-
 
 ## Features
 
-alpha_lib can accurately calculate the altitude and azimuth of an object at any location or time. 
+alpha_lib can accurately calculate the altitude and azimuth of a deep sky object at any location or time. 
 
-The local or Greenwich mean sideral time and Julian date can also be calculated.
+The local or Greenwich mean sideral time and Julian date can also be calculated, in addition to other numerical values regarding the sun and timekeeping.
 
-Additionally, it can determine the rise and set times of an object, in addition to when (and where) an object will "peak" in the sky.
+Furthermore, alpha_lib can calculate the rise and set times of an object, in addition to when (and where) an object will "peak" in the sky.
 
-The current implementation of coordinate filtering is a little janky, but it can indicate the times an object is above a certain altitude or within a certain azimuth range.
+The current implementation of coordinate filtering is probably suboptimal, but it can indicate the times an object is above a certain altitude or within a certain azimuth range.
 
 ## Usage
 
@@ -52,21 +52,27 @@ print(altAz[0].toDegrees(Units.radians));
 // 13.231104790912635 -- the Andromeda Galaxy is currently 13.2 degrees above the horizon
 ```
 
-To get the local times when the object is within the ```minAz```, ```maxAz```, and ```minAlt``` filters, use the ```withinFilters``` method. 
-
+To get the local times, expressed in radians, when the object is within the ```minAz```, ```maxAz```, and ```minAlt``` filters, use the ```withinFilters``` method. 
+This is useful for astronomers with obstructed views of the sky.
 ```dart
 print(withinFilters);
-// [18.933333333333334, 22.866666666666667] -- the object is within azimuths 200° and 300° and 40° above the horizon from about 19:00 to about 23:00. 
-// This is a useful feature for astronomers with obstructed views of the sky.
+// [4.9567..., 5.995205...] -- the object is within azimuths 200° and 300° and 40° above the horizon between those two times
+// In hours, those values are about 19:00 and 23:00.
 ```
 
-To get the hours an object will set, use the ```localRiseSetTimes``` or ```utcRiseSetTimes``` methods. 
+To get the hours an object will set, expressed in radians, use the ```localRiseSetTimes``` or ```utcRiseSetTimes``` methods. 
 If an object never sets, its rise and set times will be returned as ```[0, 0]```.
-If an object never rises, its rise and and set times will be returned as ```[-1, -1]```.
+If an object never rises, its rise and set times will be returned as ```[-1, -1]```.
 
-To get information about an object's peak, use the ```peakInfo``` method. It returns a ```Map<String, double>``` with keys ```'alt', 'az', 'time'``` and their corresponding values.
+To get information about an object's peak, use the ```peakInfo``` method. It returns a ```Map<String, double>``` with keys ```'alt', 'az', 'time'``` and their corresponding values, with time expressed in radians.
+
+Deep-sky objects are, generally, only visible at night. The sky is darkest after astronomical twilight, at which point deep-sky objects start to become visible if they are above the horizon. For the times at which the sky is dark and the object is above the horizon, use ```hoursVisible```. 
+If there are no such times, ```hoursVisible``` will return ```[-1, -1]```.
+
+
+The ```hoursSuggested``` method is like a synthesis of ```hoursVisible``` and ```withinFilters```. It returns, in radians, the times at which an object is visible _and_ within the user-defined filters. 
 
 ## Additional information
  
-Please file issues, suggestions, pull requests, etc. on the GitHub repository and I will try to respond to them. I am currently applying to colleges so I may be a little busy.
+Please file issues, suggestions, pull requests, etc. on the GitHub repository and I will try to respond to them. I am currently applying to colleges, so I may be a little busy.
 Most notably, the ```withinFilters``` method could probably use some improving. 

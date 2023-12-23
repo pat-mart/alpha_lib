@@ -41,8 +41,6 @@ class DeepSky extends SkyObject {
 
     List<double> hours = [25, -1];
 
-    var tempTime = time;
-
     final month = DateTime.timestamp().month;
 
     final year = DateTime.timestamp().year;
@@ -80,8 +78,6 @@ class DeepSky extends SkyObject {
 
   /// Returns the hours an object is observable, meaning it is in a sufficiently dark sky.
   List<double> get hoursVisible {
-    final sunAlwaysUp = sunriseSunset()[0] == 0;
-    final sunAlwaysDown = sunriseSunset()[0] == -1;
 
     if(sunriseSunset(104)[0].isNaN){
       return [-1, -1];
@@ -89,14 +85,12 @@ class DeepSky extends SkyObject {
     final morningTwi = sunriseSunset(104)[0];
     final evenTwi = sunriseSunset(104)[1];
 
-    print(localRiseSetTimes);
-
     final objRise = localRiseSetTimes[0];
     final objSet = localRiseSetTimes[1];
 
-    // Not going to explain the logic behind all of these.
-    // They should work and I don't believe any are super extraneous.
-    // I also don't believe any are missing, but I could easily be wrong.
+    // Not going to explain the logic behind these
+    // They should work and I don't believe any are extraneous
+    // I also don't believe any cases are missing, but I could easily be wrong
     if (morningTwi <= objRise && objRise <= objSet && objSet <= evenTwi){
       return [-1, -1];
     }
@@ -157,7 +151,7 @@ class DeepSky extends SkyObject {
       return {'az': -1, 'alt': -1, 'time': 0};
     }
 
-    return {'az': coords[1], 'alt': coords[0], 'time': peakHour};
+    return {'az': coords[1], 'alt': coords[0], 'time': peakHour.toRadians(Units.hours)};
   }
 
 

@@ -23,6 +23,20 @@ void main() {
       expect(vegaCircumpolar.sunriseSunset()[0] == 0, true);
     });
 
+    test('Hunting unexpected errors', () {
+      altairCircumpolar.suggestedHours;
+      vegaCircumpolar.suggestedHours;
+
+      altairCircumpolar.sunriseSunset();
+      vegaCircumpolar.sunriseSunset();
+
+      altairCircumpolar.sunriseSunset(104);
+      vegaCircumpolar.sunriseSunset(104);
+
+      altairCircumpolar.altAz;
+      vegaCircumpolar.altAz;
+    });
+
     test('Azimuth test', () {
       expect(altair.altAz[1] >= 0, true);
 
