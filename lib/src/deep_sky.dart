@@ -134,8 +134,11 @@ class DeepSky extends SkyObject {
     int peakSecondRounded = ((peakMinute % peakMinuteRounded) * 60).floor();
 
     final utcHours = utcOffset.floor();
-    final utcMinutes = (utcHours % utcOffset * 60).floor();
+    var utcMinutes = 0;
 
+    if(utcHours != 0){
+      utcMinutes = (utcHours % utcOffset * 60).floor();
+    }
     //This undoes the localization of the peak hour function
     DateTime newTime = DateTime.utc(time.year, time.month, time.day, peakHourRounded, peakMinuteRounded, peakSecondRounded).subtract(Duration(hours: utcHours, minutes: utcMinutes));
 
