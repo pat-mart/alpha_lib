@@ -1,6 +1,6 @@
 name: alpha_lib
 description: A database-less library for astronomical calculations.
-version: 1.0.1
+version: 1.0.3
 repository: https://github.com/pat-mart/alpha_lib
 
 environment:

@@ -91,10 +91,11 @@ class DeepSky extends SkyObject {
     // Not going to explain the logic behind these
     // They should work and I don't believe any are extraneous
     // I also don't believe any cases are missing, but I could easily be wrong
-    if (morningTwi <= objRise && objRise <= objSet && objSet <= evenTwi){
+    if (morningTwi <= objRise && objRise <= objSet && objSet <= evenTwi) {
       return [-1, -1];
     }
-    else if(objSet <= objRise && objRise <= morningTwi){ // I am not sure if this is possible.
+
+    else if(objSet <= objRise && objRise <= morningTwi) {// I am not sure if this is possible.
       return [objRise, morningTwi, evenTwi, objSet];
     }
     else if(objRise <= morningTwi && objSet <= evenTwi){
@@ -109,8 +110,8 @@ class DeepSky extends SkyObject {
     else if(objRise >= evenTwi && objSet >= morningTwi){
       return [objRise, morningTwi];
     }
-    else if(objRise <= evenTwi && objSet >= morningTwi){
-      return [evenTwi, morningTwi];
+    else if(objRise <= evenTwi && objSet >= morningTwi && objSet >= evenTwi){
+      return [evenTwi, objSet];
     }
     return [-1, -1];
   }

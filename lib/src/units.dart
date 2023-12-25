@@ -38,3 +38,17 @@ extension Conversion on double {
     return this;
   }
 }
+
+extension Times on List<double> {
+  List<double> get normalizedRadianTimes {
+    if(contains(-1)){
+      return [-1, -1];
+    }
+    for(int i = 0; i < length; i++){
+      if(this[i] > (25 * (pi / 12))){
+        this[i] -= (24 * (pi / 12));
+      }
+    }
+    return this;
+  }
+}
