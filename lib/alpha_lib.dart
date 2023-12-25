@@ -4,5 +4,5 @@
 library;
 
 export 'src/sky_object.dart';
-
-// TODO: Export any libraries intended for clients of this package.
+export 'src/deep_sky.dart';
+export 'src/units.dart';
