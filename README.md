@@ -17,7 +17,7 @@ A database-less package for performing astronomical calculations with any third-
 
 alpha_lib can accurately calculate the altitude and azimuth of a deep sky object at any location or time. 
 
-The local or Greenwich mean sideral time and Julian date can also be calculated, in addition to other numerical values regarding the sun and timekeeping.
+The local or Greenwich mean sideral time and Julian date can also be calculated, in addition to other numerical values regarding the Sun and timekeeping.
 
 Furthermore, alpha_lib can calculate the rise and set times of an object, in addition to when (and where) an object will "peak" in the sky.
 
