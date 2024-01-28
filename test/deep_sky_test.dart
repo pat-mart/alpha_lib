@@ -26,8 +26,8 @@ void main() {
       // print(vega.timesWithinFilters.normalizedRadianTimes[1].toHours(Units.radians));
       //
 
-      print(orion.peakInfo['time']!.toHours(Units.radians));
-      print(polaris.peakInfo['time']!.toHours(Units.radians));
+      //print(orion.peakInfo['time']!.toHours(Units.radians));
+      //print(polaris.peakInfo['time']!.toHours(Units.radians));
       //
       // print(scheatChile.peakInfo['time']!.toHours(Units.radians));
     });
