@@ -30,7 +30,7 @@ extension Conversion on double {
 
   double toHours(Units from){
     if (from == Units.degrees){
-      return this * 15;
+      return this / 15;
     }
     if(from == Units.radians){
       return this * (12 / pi);
@@ -45,8 +45,11 @@ extension Times on List<double> {
       return [-1, -1];
     }
     for(int i = 0; i < length; i++){
-      if(this[i] > (25 * (pi / 12))){
-        this[i] -= (24 * (pi / 12));
+      if(this[i] > 24.0.toRadians(Units.hours)){
+        this[i] -= (24.0.toRadians(Units.hours));
+      }
+      if(this[i] < 0){
+        this[i] += 24.0.toRadians(Units.hours);
       }
     }
     return this;

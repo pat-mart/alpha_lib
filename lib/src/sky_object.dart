@@ -76,7 +76,7 @@ abstract class SkyObject {
     // ha = +- arccos ( (cos(zenith angle) / cos(lat)cos(decl)) -  tan(lat)tan(decl)
     final sunriseHa = acos(
         (
-            cos(89.133.toRadians(Units.degrees)) /
+            cos(zenithAngle.toRadians(Units.degrees)) /
                 ( cos(latitude.toRadians(Units.degrees)) * cos(solarDecl) )
         ) - (tan(latitude.toRadians(Units.degrees) * tan(solarDecl))) );
 
@@ -93,7 +93,7 @@ abstract class SkyObject {
   double gmtMeanSiderealHour([hoursSinceMidnight = 0.0]) {
     final julianDayUtc = julianDay(true) - 2451545;
 
-    final hoursElapsed = hoursSinceMidnight == 0 ? time.toUtc().hour : hoursSinceMidnight;
+    final hoursElapsed = hoursSinceMidnight;
 
     final numCenturies = julianDayUtc / 36525;
 
@@ -129,7 +129,16 @@ abstract class SkyObject {
 
   /// Local hour angle (local sidereal time - right ascension) in radians
   double localHourAngleRad([hoursSinceMidnight = 0.0]) {
-    return localSiderealHour(hoursSinceMidnight).toRadians(Units.hours) - raRad;
+    var angle = localSiderealHour(hoursSinceMidnight).toRadians(Units.hours) - raRad;
+
+    if(angle < 0){
+      angle += (2 * pi);
+    }
+    else if(angle > pi){
+      angle -= (2 * pi);
+    }
+
+    return angle;
   }
 
   /// Returns the Julian calendar day of [this.time] in UTC

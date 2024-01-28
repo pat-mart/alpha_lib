@@ -1,7 +1,5 @@
 import 'dart:math';
 
-import 'package:alpha_lib/src/units.dart';
-
 import '../alpha_lib.dart';
 
 class DeepSky extends SkyObject {
@@ -15,11 +13,13 @@ class DeepSky extends SkyObject {
   /// Returns [alt, az] (radians)
   List<double>  get altAz {
 
+    final hourAngle = gmtMeanSiderealHour(time.hour).toRadians(Units.hours) + longitude.toRadians(Units.degrees) - raRad;
+
     final latRad = latitude.toRadians(Units.degrees);
 
-    final alt = asin(sin(latRad) * sin(decRad) + cos(latRad) * cos(decRad) * cos(localHourAngleRad(time.hour)));
+    final alt = asin(sin(latRad) * sin(decRad) + cos(latRad) * cos(decRad) * cos(hourAngle));
 
-    var az = atan2(sin(localHourAngleRad(time.hour)), (cos(localHourAngleRad(time.hour)) * sin(latRad)) - (tan(decRad) * cos(latRad)));
+    var az = atan2(sin(hourAngle), (cos(hourAngle) * sin(latRad)) - (tan(decRad) * cos(latRad)));
 
     az -= pi;
 
@@ -39,7 +39,11 @@ class DeepSky extends SkyObject {
     // although there is a simple way to determine altitude times in constant time
     // improvement suggestions obviously appreciated
 
-    List<double> hours = [25, -1];
+    if(localRiseSetTimes.normalizedRadianTimes.contains(-1)){
+      return [-1, -1];
+    }
+
+    List<double> hours = [99999, 99999];
 
     final month = DateTime.timestamp().month;
 
@@ -47,26 +51,39 @@ class DeepSky extends SkyObject {
 
     final day = DateTime.timestamp().day;
 
-    time = DateTime(year, month, day).toUtc();
+    var startHour = 0;
 
-    for(int i = 0; i < 360; i++){
+    var end = 360;
+
+    var normalizedRiseSet = localRiseSetTimes.normalizedRadianTimes;
+
+    if(normalizedRiseSet != [0, 0]){
+      startHour = normalizedRiseSet[0].toHours(Units.radians).floor();
+      var endHour = normalizedRiseSet[1].toHours(Units.radians).floor();
+
+      end = (endHour - startHour).abs() * 15;
+    }
+
+    time = DateTime.utc(year, month, day, startHour);
+
+    for(int i = 0; i < end; i++){
 
       time = time.add(Duration(minutes: 4));
 
       if(altAz[1].toDegrees(Units.radians) > minAz && altAz[1].toDegrees(Units.radians) < (maxAz == -1 ? 360 : maxAz)
           && altAz[0].toDegrees(Units.radians) > (minAlt == -1 ? 0 : minAlt)){
 
-        if(hours[0] >= i/15){
-          hours[0] = i/15;
+        if(hours[0] == 99999){
+          hours[0] = time.hour + (time.minute / 60) + (time.second / 3600);
         }
 
-        if(hours[1] <= i/15){
-          hours[1] = i/15;
+        else {
+          hours[1] = time.hour + (time.minute / 60) + (time.second / 3600);
         }
       }
     }
 
-    if(hours[0] == 25){
+    if(hours.contains(99999)){
       return [-1, -1];
     }
 
@@ -76,10 +93,11 @@ class DeepSky extends SkyObject {
     return hours;
   }
 
-  /// Returns the hours an object is observable, meaning it is in a sufficiently dark sky.
+  /// Returns the local hours an object is observable, meaning it is in a sufficiently dark sky.
+  /// [[-1, -1]] if the object is never visible and [[0, 0]] if it is always observable.
   List<double> get hoursVisible {
 
-    if(sunriseSunset(104)[0].isNaN){
+    if(sunriseSunset(104)[0].isNaN || sunriseSunset().contains(0.0)){
       return [-1, -1];
     }
     final morningTwi = sunriseSunset(104)[0];
@@ -88,14 +106,23 @@ class DeepSky extends SkyObject {
     final objRise = localRiseSetTimes[0];
     final objSet = localRiseSetTimes[1];
 
-    // Not going to explain the logic behind these
-    // They should work and I don't believe any are extraneous
-    // I also don't believe any cases are missing, but I could easily be wrong
+    if(localRiseSetTimes[0] == 0 && localRiseSetTimes[1] == 0 && !sunriseSunset(104).contains(-1.0)){
+      return sunriseSunset(104);
+    }
+
+    if(morningTwi == -1 && evenTwi == -1){
+      if(localRiseSetTimes[0] == 0 && localRiseSetTimes[1] == 0){
+        return [0, 0];
+      }
+      return localRiseSetTimes;
+    }
+
+    // FIXME the returned array on one of these sometimes has to be switched
     if (morningTwi <= objRise && objRise <= objSet && objSet <= evenTwi) {
       return [-1, -1];
     }
 
-    else if(objSet <= objRise && objRise <= morningTwi) {// I am not sure if this is possible.
+    else if(objSet <= objRise && objRise <= morningTwi) { // Not sure if this is possible
       return [objRise, morningTwi, evenTwi, objSet];
     }
     else if(objRise <= morningTwi && objSet <= evenTwi){
@@ -111,8 +138,9 @@ class DeepSky extends SkyObject {
       return [objRise, morningTwi];
     }
     else if(objRise <= evenTwi && objSet >= morningTwi && objSet >= evenTwi){
-      return [evenTwi, objSet];
+      return [evenTwi, morningTwi];
     }
+
     return [-1, -1];
   }
 
@@ -123,25 +151,33 @@ class DeepSky extends SkyObject {
       return {'az': -1, 'alt': -1, 'time': -1};
     }
 
-    double peakHour = raRad * 3.8197186342;
+    // From Astronomical Algorithms (1991) by Jean Meeus
+    var m0 = (raRad.toDegrees(Units.radians) - longitude - gmtMeanSiderealHour(0).toDegrees(Units.hours)) / 360;
 
-    peakHour = localTimeFromSidereal(peakHour);
+    if(m0 < 0){
+      m0 += 1;
+    }
+    else if(m0 > 1){
+      m0 -= 1;
+    }
 
-    int peakHourRounded = peakHour.floor();
+    var peakHour = (m0 * 24).toRadians(Units.hours);
 
-    double peakMinute = ((peakHour % peakHourRounded) * 60);
+    if(peakHour >= 24.0.toRadians(Units.hours)){
+      peakHour -= 24.0.toRadians(Units.hours);
+    }
+    else if(peakHour <= 0){
+      peakHour += 24.0.toRadians(Units.hours);
+    }
+
+    int peakHourRounded = peakHour.toHours(Units.radians).floor();
+
+    double peakMinute = ((peakHour.toHours(Units.radians) - peakHourRounded) * 60);
     int peakMinuteRounded = peakMinute.floor();
 
-    int peakSecondRounded = ((peakMinute % peakMinuteRounded) * 60).floor();
+    int peakSecondRounded = ((peakMinute - peakMinuteRounded) * 60).floor();
 
-    final utcHours = utcOffset.floor();
-    var utcMinutes = 0;
-
-    if(utcHours != 0){
-      utcMinutes = (utcHours % utcOffset * 60).floor();
-    }
-    //This undoes the localization of the peak hour function
-    DateTime newTime = DateTime.utc(time.year, time.month, time.day, peakHourRounded, peakMinuteRounded, peakSecondRounded).subtract(Duration(hours: utcHours, minutes: utcMinutes));
+    DateTime newTime = DateTime.utc(time.year, time.month, time.day, peakHourRounded, peakMinuteRounded, peakSecondRounded);
 
     final temp = time;
 
@@ -151,11 +187,20 @@ class DeepSky extends SkyObject {
 
     time = temp;
 
-    if(coords[0] < -1){
+    if(coords[0] < 0){
       return {'az': -1, 'alt': -1, 'time': 0};
     }
 
-    return {'az': coords[1], 'alt': coords[0], 'time': peakHour.toRadians(Units.hours)};
+    peakHour += utcOffset.toRadians(Units.hours);
+
+    if (peakHour < 0){
+      peakHour += 24.0.toRadians(Units.hours);
+    }
+    else if(peakHour > 24){
+      peakHour -= 24.0.toRadians(Units.hours);
+    }
+
+    return {'az': coords[1], 'alt': coords[0], 'time': peakHour};
   }
 
 
@@ -185,15 +230,76 @@ class DeepSky extends SkyObject {
     return [riseTimeRad + utcOffset.toRadians(Units.hours), setTimeRad + utcOffset.toRadians(Units.hours)];
   }
 
-
-  /// Like a combination of [hoursVisible] and [timesWithinFilters], indicates the local hours which an object is observable and within filters
+  @Deprecated('use hoursSuggested instead; same method but better matches naming convention')
   List<double> get suggestedHours {
+    return hoursSuggested;
+  }
+
+  /// Like a combination of [hoursVisible] and [timesWithinFilters], indicates the local hours which an object is both observable and the within filters. If no such times exist, [[-1, -1]] is returned
+  List<double> get hoursSuggested {
+
     if(timesWithinFilters[0] == -1 || hoursVisible[0] == -1){
-      final start = [hoursVisible[0], timesWithinFilters[0]].reduce(min);
-      final end = [hoursVisible[1], timesWithinFilters[1]].reduce(min);
+      return [-1.0, -1.0];
+    }
+
+    if(hoursVisible == [0, 0]){
+      return timesWithinFilters.normalizedRadianTimes;
+    }
+
+    final visTimes = hoursVisible.normalizedRadianTimes;
+    final filterTimes = timesWithinFilters.normalizedRadianTimes;
+
+    double start = -1;
+    double end = -1;
+
+    if(visTimes[0] > visTimes[1]){ // Easiest to visualize these using a number line and paper
+
+      if(filterTimes[0] > visTimes[0] && filterTimes[1] > filterTimes[0]){
+        return filterTimes;
+      }
+
+      if(filterTimes[0] > filterTimes[1]){
+        start = [filterTimes[0], visTimes[0]].reduce(max);
+        end = [filterTimes[1], visTimes[1]].reduce(min);
+
+        return [start, end];
+      }
+
+      if(filterTimes[0] > visTimes[1]) {
+        if(filterTimes[1] < visTimes[0]){
+          return [-1, -1];
+        }
+        return [visTimes[0], filterTimes[1]];
+      }
+
+      if(filterTimes[1] < visTimes[0]){
+        return filterTimes;
+      }
+
+      return [filterTimes[0], visTimes[1]];
+    }
+
+    if(filterTimes[0] < filterTimes[1]){
+      if(filterTimes[0] > visTimes[1]){
+        return [-1, -1];
+      }
+      start = [filterTimes[0], visTimes[0]].reduce(max);
+      end = [filterTimes[1], visTimes[1]].reduce(min);
 
       return [start, end];
     }
+
+    if(filterTimes[0] > visTimes[1]){
+      if(filterTimes[1] < visTimes[0]){
+        return [-1, -1];
+      }
+      return [visTimes[0], filterTimes[1]];
+    }
+
+    if(filterTimes[0] > visTimes[0]){
+      return [filterTimes[0], visTimes[1]];
+    }
+
     return [-1, -1];
   }
 
